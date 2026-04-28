@@ -139,20 +139,16 @@ class RegistrationScope:
         self.entries = defaultdict(list)
 
     def child(self):
-        return RegistrationScope(self)
+        pass
 
     def append(self, key, value):
-        self.entries[key].append(value)
+        pass
 
     def __get(self, key, result):
-        if self.parent:
-            self.parent.__get(key, result)
-        for elem in self.entries[key]:
-            result.append(elem)
-        return result
+        pass
 
     def get(self, key):
-        return self.__get(key, [])
+        pass
 
 
 class Scope(Enum):
@@ -193,20 +189,7 @@ def _match_defaults(spec):
     These defaults are passed to _resolve_impl when building a needed dependency
     and used when a registration is missing.
     """
-    ns = {}
-    if spec.defaults is not None:
-        # Defaults for args are just a tuple. We match args with their defaults
-        # by position, starting at the first defaulted arg
-        offset = len(spec.args) - len(spec.defaults)
-        defaults = ([None] * offset) + list(spec.defaults)
-
-        ns = {key: value for key, value in zip(spec.args, defaults) if value is not None}
-
-    if spec.kwonlydefaults is not None:
-        # defaults for kwargs are in a dict, so we just update the result dict.
-        ns.update(spec.kwonlydefaults)
-
-    return ns
+    pass
 
 
 class _Registry:
@@ -218,10 +201,7 @@ class _Registry:
         self._localns = {}
 
     def _get_needs_for_ctor(self, cls):
-        try:
-            return get_type_hints(cls.__init__, None, self._localns)
-        except NameError as e:
-            raise InvalidForwardReferenceError(str(e)) from e
+        pass
 
     def register_service_and_impl(self, service, scope, impl, resolve_args, cache=True):
         """Registers a concrete implementation of an abstract service.
@@ -247,17 +227,7 @@ class _Registry:
              >>> instance.send("Hello")
              Sending message via smtp: Hello
         """
-        self.__registrations.append(
-            service,
-            _Registration(
-                service,
-                scope,
-                impl,
-                self._get_needs_for_ctor(impl),
-                resolve_args,
-                cache,
-            ),
-        )
+        pass
 
     def register_service_and_instance(self, service, instance):
         """Register a singleton instance to implement a service.
@@ -285,10 +255,7 @@ class _Registry:
             ... )
             <punq.Container object at 0x...>
         """
-        self.__registrations.append(
-            service,
-            _Registration(service, Scope.singleton, lambda: instance, {}, {}, True),
-        )
+        pass
 
     def register_concrete_service(self, service, scope, resolve_args=None, cache=True):
         """Register a service as its own implementation.
@@ -307,34 +274,13 @@ class _Registry:
             >>> container.register(FileReader)
             <punq.Container object at 0x...>
         """
-        if not inspect.isclass(service):
-            raise InvalidSelfRegistrationError(service)
-        self.__registrations.append(
-            service,
-            _Registration(
-                service,
-                scope,
-                service,
-                self._get_needs_for_ctor(service),
-                resolve_args or {},
-                cache,
-            ),
-        )
+        pass
 
     def build_context(self, key, existing=None):
-        if existing is None:
-            return _ResolutionContext(key, self.__registrations.get(key))
-
-        if key not in existing.targets:
-            existing.targets[key] = _ResolutionTarget(key, self.__registrations.get(key))
-
-        return existing
+        pass
 
     def _update_localns(self, service):
-        if isinstance(service, type):
-            self._localns[service.__name__] = service
-        else:
-            self._localns[service] = service
+        pass
 
     def register(
         self,
@@ -345,19 +291,7 @@ class _Registry:
         cache=True,
         **kwargs,
     ):
-        resolve_args = kwargs or {}
-
-        if instance is not empty:
-            self.register_service_and_instance(service, instance)
-        elif factory is empty:
-            self.register_concrete_service(service, scope, resolve_args, cache)
-        elif callable(factory):
-            self.register_service_and_impl(service, scope, factory, resolve_args, cache)
-        else:
-            raise InvalidFactoryError(service, factory)
-
-        self._update_localns(service)
-        ensure_forward_ref(self, service, factory, instance, **kwargs)
+        pass
 
 
 class _ResolutionTarget:
@@ -367,18 +301,14 @@ class _ResolutionTarget:
         self.cache = True
 
     def is_generic_list(self):
-        return is_generic_list(self.service)
+        pass
 
     @property
     def generic_parameter(self):
-        return self.service.__args__[0]
+        pass
 
     def next_impl(self):
-        if len(self.impls) > 0:
-            impl = self.impls.pop()
-            if not impl.cache:
-                self.impls.append(impl)
-            return impl
+        pass
 
 
 class _ResolutionContext:
@@ -388,10 +318,10 @@ class _ResolutionContext:
         self.service = key
 
     def target(self, key):
-        return self.targets.get(key)
+        pass
 
     def has_cached(self, key):
-        return key in self.cache
+        pass
 
     def __getitem__(self, key):
         return self.cache.get(key)
@@ -400,7 +330,7 @@ class _ResolutionContext:
         self.cache[key] = instance
 
     def all_registrations(self, service):
-        return self.targets[service].impls
+        pass
 
 
 class Container:
@@ -485,8 +415,7 @@ class Container:
             >>> instance.send("beep")
             Sending message via smtp
         """
-        self.registrations.register(service, factory, instance, scope, cache, **kwargs)
-        return self
+        pass
 
     def resolve_all(self, service, **kwargs):
         """Return all registrations for a given service.
@@ -520,91 +449,25 @@ class Container:
             ...         if authn.matches(req):
             ...             return authn.authenticate(req)
         """
-        context = self.registrations.build_context(service)
-
-        return [self._build_impl(x, kwargs, context) for x in context.all_registrations(service)]
+        pass
 
     def _build_impl(self, registration, resolution_args, context):
         """Instantiate the registered service."""
-        spec = inspect.getfullargspec(registration.builder)
-        target_args = spec.args + spec.kwonlyargs
-
-        args = _match_defaults(spec)
-        args.update({
-            k: self._resolve_impl(v, resolution_args, context, args.get(k))
-            for k, v in registration.needs.items()
-            if k != "return" and k not in registration.args and k not in resolution_args
-        })
-        args.update(registration.args)
-
-        if "self" in target_args:
-            target_args.remove("self")
-        condensed_resolution_args = {key: resolution_args[key] for key in resolution_args if key in target_args}
-        args.update(condensed_resolution_args or {})
-
-        result = registration.builder(**args)
-
-        if registration.scope == Scope.singleton:
-            self._singletons[registration.service] = result
-
-        if registration.cache:
-            context[registration.service] = result
-
-        return result
+        pass
 
     def _should_auto_register(self, service_key, registration):
-        if self._auto_register is False:
-            return False
-        return registration is None and inspect.isclass(service_key)
+        pass
 
     def _resolve_impl(self, service_key, kwargs, context, default=None):
-        context = self.registrations.build_context(service_key, context)
-
-        if service_key in self._singletons:
-            return self._singletons[service_key]
-
-        if context.has_cached(service_key):
-            return context[service_key]
-
-        target = context.target(service_key)
-
-        if target.is_generic_list():
-            return self.resolve_all(target.generic_parameter)
-
-        registration = target.next_impl()
-
-        if registration is None and default is not None:
-            return default
-
-        if self._should_auto_register(service_key, registration):
-            self.registrations.register_concrete_service(service_key, Scope.transient, cache=False)
-            return self._resolve_impl(service_key, kwargs, None, default)
-
-        if registration is None:
-            raise MissingDependencyError("Failed to resolve implementation for " + str(service_key))
-
-        return self._build_impl(registration, kwargs, context)
+        pass
 
     def resolve(self, service_key, **kwargs):
         """Build and return an instance of a registered service."""
-        context = self.registrations.build_context(service_key)
-
-        return self._resolve_impl(service_key, kwargs, context)
+        pass
 
     def instantiate(self, service_key, **kwargs):
         """Instantiate an unregistered service."""
-        registration = _Registration(
-            service_key,
-            Scope.transient,
-            service_key,
-            self.registrations._get_needs_for_ctor(service_key),
-            {},
-            True,
-        )
-
-        context = _ResolutionContext(service_key, [registration])
-
-        return self._build_impl(registration, kwargs, context)
+        pass
 
     def child(self):
         """Create a new container that inherits configuration from this one.
@@ -654,4 +517,4 @@ class Container:
             >>> second_request_container.resolve(RequestHandler).handle()
             RequestData(user_id=789, is_admin=False)
         """
-        return Container(self.registrations, auto_register=self._auto_register)
+        pass
